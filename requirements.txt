@@ -14,7 +14,7 @@ cryptography==44.0.0
 cython==3.0.11
 dj_database_url==2.3.0
 dj_email_url==1.0.6
-Django==5.1.6
+Django==4.2.11
 django_cache_url==3.4.5
 django_celery_beat==2.7.0
 django_countries==7.6.1
