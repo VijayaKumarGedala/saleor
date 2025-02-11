@@ -5,8 +5,17 @@ FROM python:3.12 AS build
 COPY . /apps
 WORKDIR /apps
 
-# Install system dependencies required for compilation
-RUN apt-get update && apt-get install -y gcc python3-dev libffi-dev
+# Install system dependencies (JDK, GCC, Python headers, etc.)
+RUN apt-get update && apt-get install -y \
+    openjdk-17-jdk \
+    gcc \
+    python3-dev \
+    libffi-dev
+
+# Set JDK_HOME explicitly
+ENV JDK_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV JAVA_HOME=$JDK_HOME
+ENV PATH=$JAVA_HOME/bin:$PATH
 
 # Upgrade pip and install Cython first
 RUN --mount=type=cache,mode=0755,target=/root/.cache/pip pip install --upgrade pip setuptools wheel
@@ -19,6 +28,14 @@ RUN --mount=type=cache,mode=0755,target=/root/.cache/pip pip install -r requirem
 FROM python:3.12-slim AS runtime
 LABEL project="python" \
       author="vijay"
+
+# Install runtime dependencies (JDK required for Pyjnius at runtime)
+RUN apt-get update && apt-get install -y openjdk-17-jre
+
+# Set JDK_HOME explicitly
+ENV JDK_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV JAVA_HOME=$JDK_HOME
+ENV PATH=$JAVA_HOME/bin:$PATH
 
 # Create a non-root user
 ARG USERNAME=prawn
