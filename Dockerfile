@@ -1,4 +1,3 @@
-# Build stage
 FROM python:3.11 AS build  
 
 # Set working directory
@@ -7,47 +6,48 @@ COPY . /apps
 
 # Install required system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openjdk-17-jdk-headless \
-    build-essential \
-    python3-dev \
-    libffi-dev \
-    libssl-dev \
-    zlib1g-dev \
-    libpython3-dev \
-    cython3 \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+      openjdk-11-jdk-headless \
+      build-essential \
+      python3-dev \
+      libffi-dev \
+      libssl-dev \
+      zlib1g-dev \
+      libpython3-dev \
+      cython3 \
+      && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set JDK_HOME explicitly
-ENV JDK_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-ENV JAVA_HOME=$JDK_HOME
-ENV PATH=$JAVA_HOME/bin:$PATH
+# Set Java environment variables
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV PATH="$JAVA_HOME/bin:$PATH"
 
 # Upgrade pip and install essential build dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip setuptools wheel
+      pip install --upgrade pip setuptools wheel
 
 # Install Cython **before** installing Pyjnius (fixes .pxi errors)
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --no-cache-dir "Cython>=3.0.0"
+      pip install --no-cache-dir "Cython>=3.0.0"
 
-# Install Python dependencies
+# Install Pyjnius separately to avoid dependency conflicts
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --no-cache-dir -r requirements.txt
+      pip install --no-cache-dir pyjnius
 
-# Runtime stage
+# Install other Python dependencies
+RUN --mount=type=cache,target=/root/.cache/pip \
+      pip install --no-cache-dir -r requirements.txt
+
 FROM python:3.11-slim AS runtime  
 LABEL project="python" \
       author="vijay"
 
-# Install runtime dependencies (JDK required for Pyjnius at runtime)
+# Install only necessary runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openjdk-17-jre-headless \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+      openjdk-11-jre-headless \
+      && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set JDK_HOME explicitly
-ENV JDK_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-ENV JAVA_HOME=$JDK_HOME
-ENV PATH=$JAVA_HOME/bin:$PATH
+# Set Java environment variables
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV PATH="$JAVA_HOME/bin:$PATH"
 
 # Create a non-root user
 ARG USERNAME=prawn
@@ -63,6 +63,9 @@ COPY --from=build /usr/local/bin/ /usr/local/bin/
 # Copy application source code
 COPY . /app
 WORKDIR /app
+
+# Set ownership to the non-root user
+RUN chown -R ${USERNAME}:${USERNAME} /app
 
 # Switch to the non-root user
 USER ${USERNAME}
