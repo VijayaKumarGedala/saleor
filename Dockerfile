@@ -1,5 +1,5 @@
 # Build stage
-FROM python:3.11 AS build  # Use Python 3.11 (Python 3.12 may have issues with jnius)
+FROM python:3.11 AS build  
 
 # Set working directory
 WORKDIR /apps
@@ -35,8 +35,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-cache-dir -r requirements.txt
 
 # Runtime stage
-FROM python:3.11-slim AS runtime  # Keep Python version consistent
-
+FROM python:3.11-slim AS runtime  
 LABEL project="python" \
       author="vijay"
 
