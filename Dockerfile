@@ -1,16 +1,19 @@
 # Build stage
-FROM python:3.11 AS build 
+FROM python:3.11 AS build  # Use Python 3.11 (Python 3.12 may have issues with jnius)
+
 # Set working directory
 WORKDIR /apps
 COPY . /apps
 
-# Install system dependencies (JDK, build tools, Python headers, etc.)
+# Install required system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openjdk-17-jdk \
+    openjdk-17-jdk-headless \
     build-essential \
     python3-dev \
     libffi-dev \
     libssl-dev \
+    zlib1g-dev \
+    libpython3-dev \
     cython3 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -23,7 +26,7 @@ ENV PATH=$JAVA_HOME/bin:$PATH
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade pip setuptools wheel
 
-# Install Cython before anything else (fixes jnius build errors)
+# Install Cython **before** installing Pyjnius (fixes .pxi errors)
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-cache-dir "Cython>=3.0.0"
 
@@ -32,13 +35,14 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-cache-dir -r requirements.txt
 
 # Runtime stage
-FROM python:3.11-slim AS runtime  
+FROM python:3.11-slim AS runtime  # Keep Python version consistent
+
 LABEL project="python" \
       author="vijay"
 
 # Install runtime dependencies (JDK required for Pyjnius at runtime)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openjdk-17-jre \
+    openjdk-17-jre-headless \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Set JDK_HOME explicitly
