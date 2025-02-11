@@ -1,5 +1,5 @@
 # Build stage
-FROM python:3.12 AS build
+FROM python:3.10 AS build
 
 # Set working directory
 COPY . /apps
