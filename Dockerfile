@@ -1,28 +1,30 @@
 # Build stage
-FROM python:3.10 AS build
+FROM python:3.12 AS build  
 
 # Set working directory
-COPY . /apps
 WORKDIR /apps
+COPY . /apps
 
 # Install system dependencies (JDK, GCC, Python headers, etc.)
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     openjdk-17-jdk \
     gcc \
     python3-dev \
-    libffi-dev
+    libffi-dev \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Set JDK_HOME explicitly
 ENV JDK_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV JAVA_HOME=$JDK_HOME
 ENV PATH=$JAVA_HOME/bin:$PATH
 
-# Upgrade pip and install Cython first
-RUN --mount=type=cache,mode=0755,target=/root/.cache/pip pip install --upgrade pip setuptools wheel
-RUN --mount=type=cache,mode=0755,target=/root/.cache/pip pip install Cython
+# Upgrade pip and install build dependencies
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip setuptools wheel Cython
 
 # Install Python dependencies
-RUN --mount=type=cache,mode=0755,target=/root/.cache/pip pip install -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-cache-dir -r requirements.txt
 
 # Runtime stage
 FROM python:3.12-slim AS runtime
@@ -30,7 +32,9 @@ LABEL project="python" \
       author="vijay"
 
 # Install runtime dependencies (JDK required for Pyjnius at runtime)
-RUN apt-get update && apt-get install -y openjdk-17-jre
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openjdk-17-jre \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Set JDK_HOME explicitly
 ENV JDK_HOME=/usr/lib/jvm/java-17-openjdk-amd64
@@ -59,4 +63,4 @@ USER ${USERNAME}
 EXPOSE 8000
 
 # Run the application
-CMD [ "uvicorn", "saleor.asgi:application", "--host=0.0.0.0", "--port=8000" ]
+CMD ["uvicorn", "saleor.asgi:application", "--host=0.0.0.0", "--port=8000"]
