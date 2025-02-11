@@ -55,7 +55,6 @@ posuto==2025.2.0
 promise==2.3
 protobuf==5.29.3
 pybars3==0.9.7
-pyodide==0.0.2
 pyOpenSSL==25.0.0
 pytest==8.3.4
 python_dateutil==2.9.0.post0
